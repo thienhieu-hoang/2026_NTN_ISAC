@@ -1,8 +1,9 @@
 # Explanation of File Versions
+See code versions here: [Releases · thienhieu-hoang/2026_NTN_ISAC](https://github.com/thienhieu-hoang/2026_NTN_ISAC/tags)
 
 - **v6_long_sequence_rayleigh_intraFading_globalLoop:**  
-	- d
-- NOTE: from v1 to v5: just the channel paths to the UE (D-U, D-T-U) are time-varying (Rayleigh) (for comm purpose), the channel paths reflecting back to the Drone (D-U-D, D-T-D, D-T-U-D) are still Gaussian (for sensing purpose), so the range-Doppler heatmap of v6 is more noisy than those in v1-v5.
+	- Channel varies from half-block to half-block (channel in comm period is slightly different to channel in sounding period) 
+- NOTE: **from v1 to v5**: just the channel paths to the UE (D-U, D-T-U) are time-varying (Rayleigh) (for comm purpose), the channel paths reflecting back to the Drone (D-U-D, D-T-D, D-T-U-D) are still Gaussian (for sensing purpose), so the range-Doppler heatmap of v6 is more noisy than those in v1-v5.
 - **v5_long_sequence_rayleigh_cp:**
 	- Simulation Setup: Each Monte Carlo trial simulates multiple blocks. With delay synchronization, only the first block experiences transient synchronization errors.  
 	- Channel Model: The channel varies over time (from block to block) according to a Rayleigh fading process - Channel is unchanged within 1 block duration
