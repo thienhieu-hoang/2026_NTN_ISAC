@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"grep exit: $?\")",
+      "Bash(grep -ni 'mls,U\\\\|mls,T\\\\|mls},U\\\\|mls},T\\\\|two-code\\\\|two code\\\\|two orthogonal\\\\|quasi-orthogonal\\\\|two distinct\\\\|CDM\\\\|c_U\\\\|c_T\\\\|s_{\\\\\\\\mathrm{mls},\\\\|\\\\\\\\rho_U\\\\|\\\\\\\\rho_{TU}\\\\|separate despreading\\\\|two independent\\\\|two separate maps\\\\|1.5.2' system_model_3node.md)",
+      "Bash(echo \"exit:$?\")"
+    ]
+  }
+}

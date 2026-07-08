@@ -1,0 +1,228 @@
+classdef BERAnalysis < handle
+% BERANALYSIS  Sec. 4 — UE BER vs Eb/N0 sweep with time-varying channel.
+%
+%   Computes three BER curves:
+%     BER_theory     : BPSK Rayleigh reference with perfect CSI
+%                      Pe = 0.5 * (1 - sqrt(EbN0 / (1 + EbN0)))
+%     BER_theory_est : Analytical pilot-assisted BPSK under Rayleigh fading
+%                      Pe = 1 / (2 * (1 + EbN0))
+%     BER_sim        : Monte Carlo simulation with sounding ChEst
+%     BER_block1     : BER of Block 1 (synchronisation transient)
+%     BER_all        : Average BER over all blocks (1..M_seq)
+%
+%   Time-varying channel model (per Monte Carlo trial):
+%     - Node positions advance linearly each block: p(m) = p(0) + v*(m-1)*Tblock
+%     - Per-block path gains beta_DU(m) and beta_DTU(m) are derived from
+%       the time-varying distances.
+%     - Small-scale fading g_DU(m) and g_DTU(m) are generated via AR(1)
+%       correlated Rayleigh sequences (ntn.FadingSequence) so they change
+%       smoothly across blocks, not abruptly.
+%     - Receiver thermal noise remains i.i.d. across chips (physically correct).
+%
+%   Sub-files used:
+%     ntn.MobilityModel   — per-block positions, distances, delays, Dopplers
+%     ntn.FadingSequence  — AR(1) smooth Rayleigh fading sequences
+%
+%   Usage:
+%       ber = ntn.comms.BERAnalysis();
+%       ber.runSweep(params, geom, ueRx, chEst);
+
+    properties
+        EbN0_dB    = 0:2:20    % Eb/N0 sweep points [dB]
+        M_seq      = 500       % Number of blocks in the continuous sequence
+        N_trials   = 200       % Monte Carlo trials per SNR point
+
+        BER_sim                 % 1 x numel(EbN0_dB)  simulated BER (clean blocks 2..M_seq)
+        BER_block1              % 1 x numel(EbN0_dB)  simulated BER of first block (transient)
+        BER_all                 % 1 x numel(EbN0_dB)  simulated BER of entire sequence (average)
+        BER_theory              % 1 x numel(EbN0_dB)  BPSK AWGN (perfect CSI)
+        BER_theory_est          % 1 x numel(EbN0_dB)  pilot ChEst analytical
+
+        rho_norm                % scalar  MLS cross-correlation rho(ell_DTU)
+        SINR_supp               % scalar  SINR with scatter suppression
+    end
+
+    methods
+% Pre-compute theoretical BER curves for Rayleigh Fading
+        function obj = BERAnalysis()
+            EbN0_lin           = 10.^(obj.EbN0_dB/10);
+            obj.BER_sim        = zeros(size(obj.EbN0_dB));
+            obj.BER_block1     = zeros(size(obj.EbN0_dB));
+            obj.BER_all        = zeros(size(obj.EbN0_dB));
+            obj.BER_theory     = 0.5 * (1 - sqrt(EbN0_lin ./ (1 + EbN0_lin)));
+            obj.BER_theory_est = 1 ./ (2 * (1 + EbN0_lin));
+        end
+
+        function runSweep(obj, p, g, ueRx, chEst)
+        % Run the Monte Carlo Eb/N0 sweep with time-varying channel.
+        %   p     : ntn.SystemParams
+        %   g     : ntn.Geometry   (initial positions and velocities)
+        %   ueRx  : ntn.comms.UEReceiver
+        %   chEst : ntn.comms.ChannelEstimator
+
+            % ---- 1. Pre-compute mobility trajectory (fixed across all trials & SNR) ----
+            % Positions and geometry are deterministic (linear motion), so we compute
+            % them once.  Only the fading g[m] and noise are random per trial.
+            % We sample at slot period TPRI (so we need 2 * M_seq samples)
+            mob = ntn.MobilityModel(p, g, 2 * obj.M_seq);
+
+            fprintf('--- MobilityModel (2x Slot-level): trajectory over %d slots ---\n', 2 * obj.M_seq);
+            fprintf('  Initial dDU=%.1f m -> Final dDU=%.1f m\n', mob.dDU_seq(1), mob.dDU_seq(end));
+            fprintf('  Initial dDT=%.1f m -> Final dDT=%.1f m\n', mob.dDT_seq(1), mob.dDT_seq(end));
+            fprintf('  Initial dTU=%.1f m -> Final dTU=%.1f m\n\n', mob.dTU_seq(1), mob.dTU_seq(end));
+
+            % ---- 2. Pre-compute channel constants for SNR calibration & SINR cross-check ----
+            % Use average power E[|g|^2] = 1 for correct Eb/N0 calibration
+            C0 = (p.lamD / (4*pi))^2;
+            beta_DU_1 = C0 * mob.dDU_seq(1)^(-2);
+            avg_A_DU = sqrt(beta_DU_1) * sqrt(p.PD);
+            A_DU_mag = abs(ueRx.A_DU);
+
+            % ---- 3. Pre-allocate BER accumulators ----
+            obj.BER_sim    = zeros(size(obj.EbN0_dB));
+            obj.BER_block1 = zeros(size(obj.EbN0_dB));
+            obj.BER_all    = zeros(size(obj.EbN0_dB));
+
+            % ---- 4. Per-SNR Monte Carlo sweep ----
+            for ki = 1:numel(obj.EbN0_dB)
+                EbN0 = 10^(obj.EbN0_dB(ki)/10);
+
+                % Noise std: Calibrate to average path loss beta_DU at the start of the sequence
+                sigU = avg_A_DU * sqrt(p.ND / (2*EbN0));
+
+                errors_clean  = 0;
+                total_clean   = 0;
+                errors_block1 = 0;
+                total_block1  = 0;
+
+                for trial = 1:obj.N_trials
+                    % ---- 4a. Generate smooth AR(1) fading for this trial ----
+                    % Generate fading sequences of length 2 * M_seq (one sample per slot)
+                    fading = ntn.FadingSequence(p, g, 2 * obj.M_seq);
+
+                    % ---- 4b. Build per-slot channel amplitudes (length 2 * M_seq) ----
+                    beta_DU_seq = C0 * mob.dDU_seq .^ (-2);    % 1 x 2*M_seq
+                    A_DU_seq    = sqrt(beta_DU_seq) .* fading.g_DU * sqrt(p.PD);  % 1 x 2*M_seq
+                    
+                    if trial==1
+                        M_seq2 = length(fading.g_DU);
+                        block_axis = 1:M_seq2;
+                        
+                        figure('Name', 'Channel Evolution Over Blocks', 'Position', [100, 100, 800, 600]);
+                        
+                        % --- Top Subplot: Small-Scale Fading |g| ---
+                        subplot(2, 1, 1);
+                        plot(block_axis, abs(fading.g_DU), 'b-', 'LineWidth', 1.5);
+                        grid on;
+                        ylabel('|g_{DU}[m]| (Rayleigh Fading)');
+                        xlabel('Block Index (m)');
+                        title('Small-Scale Rayleigh Fading Magnitude Over Blocks');
+                        
+                        % --- Bottom Subplot: Full Channel Amplitude |h_DU_m| ---
+                        subplot(2, 1, 2);
+                        plot(block_axis, abs(A_DU_seq)./sqrt(p.PD), 'r-', 'LineWidth', 1.5);
+                        grid on;
+                        ylabel('|h_{DU}[m]| (Path Loss + Fading)');
+                        xlabel('Block Index (m)');
+                        title('Full Desired Channel Amplitude Over Blocks');  
+                    end
+
+                    beta_DT_seq = C0 * mob.dDT_seq .^ (-2);   % 1 x 2*M_seq
+                    beta_TU_seq = C0 * mob.dTU_seq .^ (-2);   % 1 x 2*M_seq
+                    A_DTU_seq   = abs(ueRx.A_DTU) / (abs(ueRx.A_DU)) ...
+                                  * sqrt(beta_DT_seq .* beta_TU_seq) .* fading.g_DT .* fading.g_TU ...
+                                  * sqrt(p.PD);  % 1 x 2*M_seq
+
+                    % ---- 4c. Generate data bits and reference MLS ----
+                    b_sim = randi([0 1], 1, obj.M_seq);
+                    d_sim = 1 - 2*b_sim;
+
+                    % ---- 4d. Build the continuous received flat signal block-by-block ----
+                    % Each block m consists of sounding slot (index 2m-1) and data slot (index 2m).
+                    y_rx_flat = zeros(2*p.ND * obj.M_seq, 1);
+
+                    for m = 1:obj.M_seq
+                        blk_start = (m-1)*2*p.ND + 1;
+                        blk_end   = m*2*p.ND;
+
+                        % Sounding slot (first half of block m)
+                        idx_S     = 2*m - 1;
+                        ell_du_S  = mob.ell_DU_seq(idx_S);
+                        ell_dtu_S = mob.ell_DTU_seq(idx_S);
+                        ph_DU_S   = exp(1j*2*pi*mob.fD_DU_seq(idx_S) * (idx_S - 1) * p.TPRI);
+                        ph_DTU_S  = exp(1j*2*pi*mob.nu_DTU_seq(idx_S) * (idx_S - 1) * p.TPRI);
+                        A_DU_S    = A_DU_seq(idx_S);
+                        A_DTU_S   = A_DTU_seq(idx_S);
+
+                        x_S_DU    = circshift(p.s_mls, ell_du_S);
+                        x_S_DTU   = circshift(p.s_mls, ell_dtu_S);
+                        y_rx_S    = A_DU_S * x_S_DU * ph_DU_S ...
+                                  + A_DTU_S * x_S_DTU * ph_DTU_S ...
+                                  + sigU * (randn(p.ND, 1) + 1j*randn(p.ND, 1));
+
+                        % Data slot (second half of block m)
+                        idx_D     = 2*m;
+                        ell_du_D  = mob.ell_DU_seq(idx_D);
+                        ell_dtu_D = mob.ell_DTU_seq(idx_D);
+                        ph_DU_D   = exp(1j*2*pi*mob.fD_DU_seq(idx_D) * (idx_D - 1) * p.TPRI);
+                        ph_DTU_D  = exp(1j*2*pi*mob.nu_DTU_seq(idx_D) * (idx_D - 1) * p.TPRI);
+                        A_DU_D    = A_DU_seq(idx_D);
+                        A_DTU_D   = A_DTU_seq(idx_D);
+
+                        x_D_DU    = circshift(p.s_mls * d_sim(m), ell_du_D);
+                        x_D_DTU   = circshift(p.s_mls * d_sim(m), ell_dtu_D);
+                        y_rx_D    = A_DU_D * x_D_DU * ph_DU_D ...
+                                  + A_DTU_D * x_D_DTU * ph_DTU_D ...
+                                  + sigU * (randn(p.ND, 1) + 1j*randn(p.ND, 1));
+
+                        y_rx_flat(blk_start:blk_end) = [y_rx_S; y_rx_D];
+                    end
+
+                    % ---- 4e. Frame synchronisation: compensate direct-path delay ----
+                    % Use average (or initial) ell_DU as the fixed sync offset
+                    ell_sync = mob.ell_DU_seq(1);
+                    y_rx_flat_aligned = circshift(y_rx_flat, [-ell_sync, 0]);
+
+                    % ---- 4f. Reshape to 2ND x M_seq matrix ----
+                    y_full_sim = reshape(y_rx_flat_aligned, [2*p.ND, obj.M_seq]);
+                    yS = y_full_sim(1:p.ND,     :);   % ND x M_seq sounding
+                    yP = y_full_sim(p.ND+1:end, :);   % ND x M_seq data
+
+                    % ---- 4g. Channel estimation from sounding ----
+                    Rs = ifft(fft(yS, [], 1) .* conj(chEst.Sf), [], 1);
+                    [~, peak_idx_sim] = max(mean(abs(Rs), 2));
+                    ell_DU_est_sim    = peak_idx_sim - 1;
+                    hh = Rs(ell_DU_est_sim + 1, :) / p.ND;   % 1 x M_seq
+
+                    % ---- 4h. Despread + equalise + BPSK decision ----
+                    Rd    = ifft(fft(yP, [], 1) .* conj(chEst.Sf), [], 1);
+                    zd    = Rd(ell_DU_est_sim + 1, :) ./ hh;   % 1 x M_seq
+                    d_dec = sign(real(zd));                     % 1 x M_seq
+
+                    % ---- 4i. Count errors ----
+                    errors_block1 = errors_block1 + sum(d_dec(1) ~= d_sim(1));
+                    total_block1  = total_block1  + 1;
+
+                    errors_clean  = errors_clean  + sum(d_dec(2:end) ~= d_sim(2:end));
+                    total_clean   = total_clean   + (obj.M_seq - 1);
+                end
+
+                obj.BER_sim(ki)    = errors_clean  / total_clean;
+                obj.BER_block1(ki) = errors_block1 / total_block1;
+                obj.BER_all(ki)    = (errors_block1 + errors_clean) / (total_block1 + total_clean);
+            end
+
+            % ---- 5. Analytical SINR cross-check (Sec. 4.1 SINR formula) ----
+            obj.rho_norm  = (ueRx.sD_DTU.' * ueRx.sD_DU) / p.ND;
+            EbN0_last     = 10^(obj.EbN0_dB(end)/10);
+            A_DU_mag2     = A_DU_mag^2;
+            obj.SINR_supp = A_DU_mag2 / ...
+                            ((abs(ueRx.A_DTU)*abs(obj.rho_norm))^2 + A_DU_mag2/EbN0_last);
+
+            fprintf('--- Analytical SINR cross-check (Sec. 4.1) ---\n');
+            fprintf('rho(ell_DTU)=%.5f  (1/N_D=%.5f)\n', obj.rho_norm, 1/p.ND);
+            fprintf('At Eb/N0=%d dB: SINR_U(scatter suppressed)=%.1f dB\n\n', ...
+                    obj.EbN0_dB(end), 10*log10(obj.SINR_supp));
+        end
+    end
+end
