@@ -1,3 +1,0 @@
-- Check the mismatch between the simulation and theoretical lines of the time-varying (rayleigh) channel 
-- Compute range-Doppler map over time with time-varying channel
-- Perform channel prediction at UE? 
