@@ -109,8 +109,27 @@ fprintf('rho(ell_DTU)=%.5f  (1/N_D=%.5f)\n', ber.rho_norm, 1/params.ND);
 fprintf('At Eb/N0=%d dB: SINR_U(scatter suppressed)=%.1f dB\n\n', ...
         ber.EbN0_dB(end), 10*log10(ber.SINR_supp));
 
-%% ---- Step 5: Plot Comms-Only BER Results ----
-plots.plotBER(ber, fullfile(ROOT, 'ue_ber_comms_only.png'));
-fprintf('Saved: %s\n\n', fullfile(ROOT, 'ue_ber_comms_only.png'));
+%% ---- Step 5: Plot & Save Comms-Only BER Results ----
+resultsDir = fullfile(ROOT, 'results', 'BER');
+if ~exist(resultsDir, 'dir')
+    mkdir(resultsDir);
+end
+
+pngPath = fullfile(resultsDir, 'ue_ber_comms_only.png');
+plots.plotBER(ber, pngPath);
+
+matPath = fullfile(resultsDir, 'ue_ber_comms_only.mat');
+% Extract values of the plotted lines for easy loading/replotting
+EbN0_dB = ber.EbN0_dB;
+BER_theory = ber.BER_theory;
+BER_theory_est = ber.BER_theory_est;
+BER_sim = ber.BER_sim;
+BER_block1 = ber.BER_block1;
+BER_all = ber.BER_all;
+M_seq = ber.M_seq;
+
+save(matPath, 'EbN0_dB', 'BER_theory', 'BER_theory_est', 'BER_sim', 'BER_block1', 'BER_all', 'M_seq');
+fprintf('Saved plot image: %s\n', pngPath);
+fprintf('Saved data values: %s\n\n', matPath);
 
 fprintf('=== Simulation Driver Completed Successfully ===\n');

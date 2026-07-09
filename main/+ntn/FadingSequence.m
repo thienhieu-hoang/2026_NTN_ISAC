@@ -36,14 +36,21 @@ classdef FadingSequence < handle
         fd_DU       % max Doppler on D-U link [Hz]
         fd_DT       % max Doppler on D-T link [Hz]
         fd_TU       % max Doppler on T-U link [Hz]
+        
+        model_type  % 'ar1' or 'jakes'
     end
 
     methods
-        function obj = FadingSequence(p, g, M_seq)
-        % p     : ntn.SystemParams
-        % g     : ntn.Geometry   (provides velocities and initial Doppler estimates)
-        % M_seq : number of blocks
+        function obj = FadingSequence(p, g, M_seq, model_type)
+        % p          : ntn.SystemParams
+        % g          : ntn.Geometry   (provides velocities and initial Doppler estimates)
+        % M_seq      : number of blocks
+        % model_type : char ('ar1' or 'jakes', default is 'ar1')
 
+            if nargin < 4
+                model_type = 'ar1';
+            end
+            obj.model_type = model_type;
             obj.M_seq = M_seq;
 
             % Maximum Doppler frequency for each link [Hz]
@@ -60,16 +67,17 @@ classdef FadingSequence < handle
             obj.alpha_DT = besselj(0, 2*pi*obj.fd_DT * p.TPRI);
             obj.alpha_TU = besselj(0, 2*pi*obj.fd_TU * p.TPRI);
 
-            % Generate AR(1) fading sequences
-            obj.g_DU = ntn.FadingSequence.ar1_sequence(obj.alpha_DU, M_seq);
-            obj.g_DT = ntn.FadingSequence.ar1_sequence(obj.alpha_DT, M_seq);
-            obj.g_TU = ntn.FadingSequence.ar1_sequence(obj.alpha_TU, M_seq);
-
-            % fprintf('--- FadingSequence (AR(1) Rayleigh) ---\n');
-            % fprintf('  D-U: fd=%.2f Hz, alpha=%.6f  (Tblock=%.3f us)\n', ...
-            %         obj.fd_DU, obj.alpha_DU, p.Tblock*1e6);
-            % fprintf('  D-T: fd=%.2f Hz, alpha=%.6f\n', obj.fd_DT, obj.alpha_DT);
-            % fprintf('  T-U: fd=%.2f Hz, alpha=%.6f\n\n', obj.fd_TU, obj.alpha_TU);
+            % Generate fading sequences based on selected model
+            if strcmpi(obj.model_type, 'jakes')
+                obj.g_DU = ntn.FadingSequence.jakes_sequence(obj.fd_DU, M_seq, p.TPRI);
+                obj.g_DT = ntn.FadingSequence.jakes_sequence(obj.fd_DT, M_seq, p.TPRI);
+                obj.g_TU = ntn.FadingSequence.jakes_sequence(obj.fd_TU, M_seq, p.TPRI);
+            else
+                % Default to AR(1)
+                obj.g_DU = ntn.FadingSequence.ar1_sequence(obj.alpha_DU, M_seq);
+                obj.g_DT = ntn.FadingSequence.ar1_sequence(obj.alpha_DT, M_seq);
+                obj.g_TU = ntn.FadingSequence.ar1_sequence(obj.alpha_TU, M_seq);
+            end
         end
     end
 
@@ -88,6 +96,32 @@ classdef FadingSequence < handle
                 w    = (randn + 1j*randn) / sqrt(2);
                 g(m) = alpha * g(m-1) + noise_scale * w;
             end
+        end
+
+        function g = jakes_sequence(fd, M, Ts)
+        % JAKES_SEQUENCE  Generate a time-varying Rayleigh fading sequence
+        %   using the Sum-of-Sinusoids (SoS) model.
+        %
+        %   Inputs:
+        %     fd : maximum Doppler frequency [Hz]
+        %     M  : number of time samples (slots)
+        %     Ts : time step between samples [s] (typically TPRI)
+        
+            Np = 100; % number of multipath paths
+            t = (0:M-1) * Ts;
+            
+            % Generate random angles of arrival and initial phases
+            theta = rand(1, Np) * 2 * pi;
+            phi = rand(1, Np) * 2 * pi;
+            
+            % Sum-of-Sinusoids
+            g = zeros(1, M);
+            for n = 1:Np
+                g = g + exp(1j * (2 * pi * fd * cos(theta(n)) * t + phi(n)));
+            end
+            
+            % Normalize to unit variance: E[|g|^2] = 1
+            g = g / sqrt(Np);
         end
     end
 end

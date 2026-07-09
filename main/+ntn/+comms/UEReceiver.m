@@ -103,7 +103,30 @@ classdef UEReceiver < handle
                 C0          = (p.lamD / (4*pi))^2;
                 beta_DU_seq = C0 * mob.dDU_seq .^ (-2);
                 A_DU_seq    = sqrt(beta_DU_seq) .* fading.g_DU * sqrt(p.PD);
-                
+
+                %% Uncomment this if need to plot the channel over time
+                % M_seq = length(fading.g_DU);
+                % block_axis = 1:M_seq;
+                % 
+                % figure('Name', 'Channel Evolution Over Blocks', 'Position', [100, 100, 800, 600]);
+                % 
+                % % --- Top Subplot: Small-Scale Fading |g| ---
+                % subplot(2, 1, 1);
+                % plot(block_axis, abs(fading.g_DU), 'b-', 'LineWidth', 1.5);
+                % grid on;
+                % ylabel('|g_{DU}[m]| (Rayleigh Fading)');
+                % xlabel('Half-Block Index (m*2)');
+                % title('Small-Scale Rayleigh Fading Magnitude Over Blocks');
+                % 
+                % % --- Bottom Subplot: Full Channel Amplitude |h_DU_m| ---
+                % subplot(2, 1, 2);
+                % plot(block_axis, abs(A_DU_seq)./sqrt(p.PD), 'r-', 'LineWidth', 1.5);
+                % grid on;
+                % ylabel('|h_{DU}[m]| (Path Loss + Fading)');
+                % xlabel('Half-Block Index (m*2)');
+                % title('Full Desired Channel Amplitude Over Blocks');  
+                %%
+
                 beta_DT_seq = C0 * mob.dDT_seq .^ (-2);
                 beta_TU_seq = C0 * mob.dTU_seq .^ (-2);
                 A_DTU_seq   = abs(ch.eta_T) * sqrt(beta_DT_seq .* beta_TU_seq) .* fading.g_DT .* fading.g_TU * sqrt(p.PD);

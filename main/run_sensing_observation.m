@@ -83,9 +83,15 @@ else
     error('Invalid window_mode. Choose ''sliding'' or ''growing''.');
 end
 
+% Set up results directory
+resultsDir = fullfile(ROOT, 'results');
+if ~exist(resultsDir, 'dir')
+    mkdir(resultsDir);
+end
+
 % Set up figure for dynamic plotting
 fig = figure('Name', 'Dynamic Range-Doppler Map Observation', 'Position', [100, 100, 1200, 500]);
-gif_path = fullfile(ROOT, 'sensing_observation.gif');
+gif_path = fullfile(resultsDir, 'sensing_observation.gif');
 
 % Capture frame indices for snapshots
 snapshot_steps = round(linspace(1, num_steps, 3));
@@ -190,7 +196,7 @@ for step_idx = 1:num_steps
     snap_idx = find(snapshot_steps == step_idx);
     if ~isempty(snap_idx)
         snap_name = sprintf('sensing_snapshot_%s.png', snapshot_names{snap_idx});
-        saveas(fig, fullfile(ROOT, snap_name));
+        saveas(fig, fullfile(resultsDir, snap_name));
         fprintf('  Saved snapshot: %s\n', snap_name);
     end
     

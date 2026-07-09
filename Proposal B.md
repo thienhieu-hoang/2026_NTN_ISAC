@@ -86,3 +86,11 @@ During the data block when symbols $d_m \in \{+1, -1\}$ are transmitted, the UE 
 3.  It subtracts the reconstructed interference:
     $$y_{\text{cleaned}}[n,m] = y_{U,\text{data}}[n,m] - \hat{y}_{DTU}[n,m]$$
 4.  It performs the final, clean demodulation of the communication payload from $y_{\text{cleaned}}[n,m]$.
+
+---
+Compare Proposal D (Cooperative Channel prediction) with benchmarks: 
+- Channel estimation only at UE (estimate channel at the sounding period, then assume it unchanged until the next sounding period)
+- Channel prediction at UE, without feedback from Drone: Calculate the phase difference between the 2 consecutive estimated channels, then predict the channel 
+
+Note on Proposal B: 
+- Check the path delay of D-U-D-U to see the UE receive the feedback (parameters) from the Drone at which time, corresponding to which block
