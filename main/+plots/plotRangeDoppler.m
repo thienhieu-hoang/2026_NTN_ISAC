@@ -8,7 +8,7 @@ function plotRangeDoppler(droneRx, geom, params, savePath)
 %     droneRx  : ntn.sensing.DroneReceiver  (must have RD_before, RD_after)
 %     geom     : ntn.Geometry
 %     params   : ntn.SystemParams
-%     savePath : char  full path for the output PNG file
+%     savePath : char  full path for the output PDF file
 
     figure('Name','Range-Doppler Map','Position',[100 100 1100 440]);
 

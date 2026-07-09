@@ -18,7 +18,7 @@ fprintf('Loading saved BER data from: %s...\n', matPath);
 berData = load(matPath);
 
 % Replot and save to results directory
-pngPath = fullfile(resultsDir, 'ue_ber_comms_only_replot.png');
-plots.plotBER(berData, pngPath);
+pdfPath = fullfile(resultsDir, 'ue_ber_comms_only_replot.pdf');
+plots.plotBER(berData, pdfPath);
 
-fprintf('Replot complete. Saved figure to: %s\n', pngPath);
+fprintf('Replot complete. Saved figure to: %s\n', pdfPath);

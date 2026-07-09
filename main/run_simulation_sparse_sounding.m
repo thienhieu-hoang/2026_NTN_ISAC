@@ -167,7 +167,7 @@ end
 legend(legend_entries, 'Location', 'southwest');
 
 % Save comparison plot
-comparisonPlotPath = fullfile(resultsDir, 'ue_ber_sparse_sounding_comparison.png');
+comparisonPlotPath = fullfile(resultsDir, 'ue_ber_sparse_sounding_comparison.pdf');
 saveas(fig, comparisonPlotPath);
 fprintf('\nSaved comparison plot: %s\n', comparisonPlotPath);
 fprintf('=== Simulation Driver Completed Successfully ===\n');

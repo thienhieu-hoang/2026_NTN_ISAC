@@ -195,7 +195,7 @@ for step_idx = 1:num_steps
     % Capture snapshots
     snap_idx = find(snapshot_steps == step_idx);
     if ~isempty(snap_idx)
-        snap_name = sprintf('sensing_snapshot_%s.png', snapshot_names{snap_idx});
+        snap_name = sprintf('sensing_snapshot_%s.pdf', snapshot_names{snap_idx});
         saveas(fig, fullfile(resultsDir, snap_name));
         fprintf('  Saved snapshot: %s\n', snap_name);
     end

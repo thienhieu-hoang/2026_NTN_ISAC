@@ -5,7 +5,7 @@ function plotGeometry(geom, savePath)
 %
 %   Inputs:
 %     geom     : ntn.Geometry
-%     savePath : char  full path for the output PNG file
+%     savePath : char  full path for the output PDF file
 
     fig = figure('Name', 'System Geometry', 'Position', [200 200 800 600]);
     

@@ -10,7 +10,7 @@ function plotBER(ber, savePath)
 %
 %   Inputs:
 %     ber      : ntn.comms.BERAnalysis  (must have run runSweep first)
-%     savePath : char  full path for the output PNG file
+%     savePath : char  full path for the output PDF file
 
     figure('Name','UE BER','Position',[150 150 720 540]);
 

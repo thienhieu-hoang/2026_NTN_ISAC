@@ -115,8 +115,8 @@ if ~exist(resultsDir, 'dir')
     mkdir(resultsDir);
 end
 
-pngPath = fullfile(resultsDir, 'ue_ber_comms_only.png');
-plots.plotBER(ber, pngPath);
+pdfPath = fullfile(resultsDir, 'ue_ber_comms_only.pdf');
+plots.plotBER(ber, pdfPath);
 
 matPath = fullfile(resultsDir, 'ue_ber_comms_only.mat');
 % Extract values of the plotted lines for easy loading/replotting
@@ -129,7 +129,7 @@ BER_all = ber.BER_all;
 M_seq = ber.M_seq;
 
 save(matPath, 'EbN0_dB', 'BER_theory', 'BER_theory_est', 'BER_sim', 'BER_block1', 'BER_all', 'M_seq');
-fprintf('Saved plot image: %s\n', pngPath);
+fprintf('Saved plot image: %s\n', pdfPath);
 fprintf('Saved data values: %s\n\n', matPath);
 
 fprintf('=== Simulation Driver Completed Successfully ===\n');
