@@ -3,11 +3,14 @@
 %  NTN-ISAC Sparse Sounding Comms-Only BER Simulation Driver
 %  Evaluates different sounding densities (e.g. every 64, 128, 256 blocks)
 % ================================================================
-clear; close all; clc;
+% clear; close all; clc;
+close all; clc;
 rng(2024);
 
 % [USER CONFIGURABLE] Fading model type: 'ar1' or 'jakes'
-fading_model = 'ar1'; 
+if ~exist('fading_model', 'var')
+    fading_model = 'ar1'; 
+end
 
 ROOT = fileparts(mfilename('fullpath'));   % project root directory
 addpath(ROOT);
@@ -49,12 +52,15 @@ if ~exist(resultsDir, 'dir')
 end
 
 % Sounding period densities to evaluate
-L_sound_list = [64, 128, 256];
+if ~exist('L_sound_list', 'var')
+    L_sound_list = [64, 128, 256];
+end
 
 fprintf('=== Starting Sparse Sounding BER Sweep (0:4:20 dB) ===\n');
 
 for L_sound = L_sound_list
     fprintf('\n--- Evaluating Sounding Interval: Every %d blocks ---\n', L_sound);
+    params.L_sound = L_sound; % Dynamically set sounding interval
     
     BER_all = zeros(size(EbN0_dB_sparse));
     
@@ -82,15 +88,6 @@ for L_sound = L_sound_list
             % 4. Run Channel Estimation & Demodulator (Comms)
             chEst = ntn.comms.ChannelEstimator(params, ueRx, geom);
             
-            % Modify chEst.h_hat for sparse sounding
-            h_hat_sparse = chEst.h_hat;
-            for m = 1:params.M
-                % Find index of the most recent sounding block (1, L_sound+1, 2*L_sound+1, etc.)
-                last_sounding_idx = floor((m-1)/L_sound) * L_sound + 1;
-                h_hat_sparse(m) = chEst.h_hat(last_sounding_idx);
-            end
-            chEst.h_hat = h_hat_sparse;
-            
             demod = ntn.comms.Demodulator(params, ueRx, chEst, txSignal);
             
             % Accumulate comm errors
@@ -98,7 +95,7 @@ for L_sound = L_sound_list
             d_sim = txSignal.dD;
             
             errors_all = errors_all + sum(d_dec ~= d_sim);
-            total_all  = total_all  + params.M;
+            total_all  = total_all  + length(d_sim);
         end
         
         BER_all(ki) = errors_all / total_all;
@@ -167,7 +164,17 @@ end
 legend(legend_entries, 'Location', 'southwest');
 
 % Save comparison plot
-comparisonPlotPath = fullfile(resultsDir, 'ue_ber_sparse_sounding_comparison.pdf');
-saveas(fig, comparisonPlotPath);
+suffix = sprintf('_%d', L_sound_list);
+comparisonPlotPath = fullfile(resultsDir, sprintf('ue_ber_sparse_sounding_comparison%s.pdf', suffix));
+if endsWith(comparisonPlotPath, '.pdf', 'IgnoreCase', true)
+    fig.Units = 'inches';
+    fig.PaperUnits = 'inches';
+    pos = fig.Position;
+    fig.PaperSize = [pos(3), pos(4)];
+    fig.PaperPosition = [0, 0, pos(3), pos(4)];
+    print(fig, comparisonPlotPath, '-dpdf', '-r0');
+else
+    saveas(fig, comparisonPlotPath);
+end
 fprintf('\nSaved comparison plot: %s\n', comparisonPlotPath);
 fprintf('=== Simulation Driver Completed Successfully ===\n');

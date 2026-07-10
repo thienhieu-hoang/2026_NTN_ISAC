@@ -213,14 +213,31 @@ classdef DroneReceiver < handle
         %   p  : ntn.SystemParams
         %   tx : ntn.TransmitSignal
 
-            % Strip BPSK modulation from data half (d_m^2 = 1)
-            ypD_data  = obj.yD_data .* tx.dD;
-
-            % Coherent integration: sounding + stripped-data
-            %   Signal power x4 (+6 dB), noise power x2 (+3 dB) => net +3 dB
-            % Note: We shift the integrated signal forward by obj.ell_mono so that
+            % Build is_comm_slot and dD_all of length 2*M
+            is_comm_slot = true(1, 2 * p.M);
+            for m = 1:p.M
+                if mod(m-1, p.L_sound) == 0
+                    is_comm_slot(2*m - 1) = false;
+                end
+            end
+            
+            dD_all = ones(1, 2 * p.M);
+            dD_all(is_comm_slot) = tx.dD;
+            
+            % Interleave sounding and data slots to get all 2*M slots (ND x 2M)
+            yD_slots = zeros(p.ND, 2 * p.M);
+            yD_slots(:, 1:2:end) = obj.yD_sound;
+            yD_slots(:, 2:2:end) = obj.yD_data;
+            
+            % Strip modulation from all slots
+            yD_slots_stripped = yD_slots .* dD_all;
+            
+            % Coherent integration: sum first half and second half of each block
+            yD_int_raw = yD_slots_stripped(:, 1:2:end) + yD_slots_stripped(:, 2:2:end);
+            
+            % Shift the integrated signal forward by obj.ell_mono so that
             % the target peak appears at its true physical delay (range) in the map.
-            obj.yD_int = circshift(obj.yD_sound + ypD_data, [obj.ell_mono, 0]);
+            obj.yD_int = circshift(yD_int_raw, [obj.ell_mono, 0]);
 
             fprintf('--- Drone Rx: coherent integration (sounding + data halves) ---\n');
             fprintf('Signal amplitude: x2  =>  +6 dB signal power\n');

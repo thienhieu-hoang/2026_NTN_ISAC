@@ -1,6 +1,20 @@
+*(Readup from the bottom (from version 1) to better understand the updates gradually through each code version)*
 # Explanation of File Versions
 See code versions here: [Releases · thienhieu-hoang/2026_NTN_ISAC](https://github.com/thienhieu-hoang/2026_NTN_ISAC/tags)
-
+now I want to perform channel prediction instead of just estimate channel at sounding period then assume it unchanged  
+in the code, I can configure parameters like: [1 2 9] - which means, the sounding period appears at block 1 and block 2, we estimate the channels ate these 2 blocks, then estimate the Doppler, then predict channel at blocks 3-8 (in which there are no sounding period)
+- **v7_2 - main:**
+	- Frame structure: (for example, with sounding periodicity of 8 block)
+		``[sound, comm],  [comm, comm]x7 ``
+- **v7_1 - main**:
+	- Now all the code version is just with the same folder main
+	- Version control by git
+	- The sounding is periodic, the periodicity can be set to 8, 16, 32, 64, 128, 256 blocks
+	- The channel can be set to vary overtime (every half-block) with AR(1) model or Jakes model
+	- (not good) the frame structure over time is set as: 
+		(for example, with sounding periodicity of 8 block)
+		`` [sound, comm],  [empty_sound, comm]x7 ``
+			--> waste ``empty_sound period`` --> not realistic
 - **v6_long_sequence_rayleigh_intraFading_globalLoop:**  
 	- Channel varies from half-block to half-block (channel in comm period is slightly different to channel in sounding period) 
 - NOTE: **from v1 to v5**: just the channel paths to the UE (D-U, D-T-U) are time-varying (Rayleigh) (for comm purpose), the channel paths reflecting back to the Drone (D-U-D, D-T-D, D-T-U-D) are still Gaussian (for sensing purpose), so the range-Doppler heatmap of v6 is more noisy than those in v1-v5.

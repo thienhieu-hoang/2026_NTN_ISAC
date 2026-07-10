@@ -43,6 +43,16 @@ function plotBER(ber, savePath)
            % ['Sim: All Blocks (1 to ', num2str(ber.M_seq), '; Average)'], ...
            % 'Location', 'southwest');
 
-    saveas(gcf, savePath);
+    if endsWith(savePath, '.pdf', 'IgnoreCase', true)
+        fig = gcf;
+        fig.Units = 'inches';
+        fig.PaperUnits = 'inches';
+        pos = fig.Position;
+        fig.PaperSize = [pos(3), pos(4)];
+        fig.PaperPosition = [0, 0, pos(3), pos(4)];
+        print(fig, savePath, '-dpdf', '-r0');
+    else
+        saveas(gcf, savePath);
+    end
     fprintf('Saved: %s\n', savePath);
 end

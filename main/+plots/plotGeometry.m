@@ -76,6 +76,15 @@ function plotGeometry(geom, savePath)
     legend(ax, 'Location', 'northeastoutside', 'FontSize', 9);
     
     % Save image
-    saveas(fig, savePath);
+    if endsWith(savePath, '.pdf', 'IgnoreCase', true)
+        fig.Units = 'inches';
+        fig.PaperUnits = 'inches';
+        pos = fig.Position;
+        fig.PaperSize = [pos(3), pos(4)];
+        fig.PaperPosition = [0, 0, pos(3), pos(4)];
+        print(fig, savePath, '-dpdf', '-r0');
+    else
+        saveas(fig, savePath);
+    end
     fprintf('Saved: %s\n', savePath);
 end

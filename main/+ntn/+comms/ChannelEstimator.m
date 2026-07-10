@@ -32,7 +32,14 @@ classdef ChannelEstimator < handle
             obj.ell_DU_est = peak_idx - 1;      % convert to 0-based index
 
             % Per-block channel estimate: normalise by code length
-            obj.h_hat = obj.R_sound(obj.ell_DU_est + 1, :) / p.ND;
+            h_hat_all = obj.R_sound(obj.ell_DU_est + 1, :) / p.ND;
+            
+            % Freeze estimates for blocks between sounding periods
+            obj.h_hat = zeros(1, p.M);
+            for m = 1:p.M
+                last_sounding_idx = floor((m-1)/p.L_sound) * p.L_sound + 1;
+                obj.h_hat(m) = h_hat_all(last_sounding_idx);
+            end
 
             % fprintf('--- Channel estimation at UE (Sec. 4.1, Step 1) ---\n');
             % fprintf('Estimated UE delay: %d chips (True: %d)\n', ...

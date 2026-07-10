@@ -196,7 +196,17 @@ for step_idx = 1:num_steps
     snap_idx = find(snapshot_steps == step_idx);
     if ~isempty(snap_idx)
         snap_name = sprintf('sensing_snapshot_%s.pdf', snapshot_names{snap_idx});
-        saveas(fig, fullfile(resultsDir, snap_name));
+        snap_path = fullfile(resultsDir, snap_name);
+        if endsWith(snap_path, '.pdf', 'IgnoreCase', true)
+            fig.Units = 'inches';
+            fig.PaperUnits = 'inches';
+            pos = fig.Position;
+            fig.PaperSize = [pos(3), pos(4)];
+            fig.PaperPosition = [0, 0, pos(3), pos(4)];
+            print(fig, snap_path, '-dpdf', '-r0');
+        else
+            saveas(fig, snap_path);
+        end
         fprintf('  Saved snapshot: %s\n', snap_name);
     end
     

@@ -40,6 +40,16 @@ function plotRangeDoppler(droneRx, geom, params, savePath)
          'w^', 'MarkerSize',12, 'LineWidth',1.5);
     legend('Weak','TextColor','w','Location','northeast','Color',[0.2 0.2 0.2]);
 
-    saveas(gcf, savePath);
+    if endsWith(savePath, '.pdf', 'IgnoreCase', true)
+        fig = gcf;
+        fig.Units = 'inches';
+        fig.PaperUnits = 'inches';
+        pos = fig.Position;
+        fig.PaperSize = [pos(3), pos(4)];
+        fig.PaperPosition = [0, 0, pos(3), pos(4)];
+        print(fig, savePath, '-dpdf', '-r0');
+    else
+        saveas(gcf, savePath);
+    end
     fprintf('Saved: %s\n', savePath);
 end
