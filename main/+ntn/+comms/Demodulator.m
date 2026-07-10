@@ -29,9 +29,19 @@ classdef Demodulator < handle
 
             % 1. Determine slot types and build is_comm_slot
             is_comm_slot = true(1, 2 * p.M);
-            for m = 1:p.M
-                if mod(m-1, p.L_sound) == 0
-                    is_comm_slot(2*m - 1) = false; % sounding slot
+            if isprop(p, 'sounding_config') && ~isempty(p.sounding_config)
+                a = p.sounding_config(1);
+                b = p.sounding_config(2);
+                for m = 1:p.M
+                    if mod(m-1, b-1) == 0 || mod(m-1, b-1) == a-1
+                        is_comm_slot(2*m - 1) = false; % sounding slot
+                    end
+                end
+            else
+                for m = 1:p.M
+                    if mod(m-1, p.L_sound) == 0
+                        is_comm_slot(2*m - 1) = false; % sounding slot
+                    end
                 end
             end
             

@@ -25,6 +25,7 @@ classdef SystemParams < handle
         Ncp    = 34         % Cyclic Prefix length (chips)
         M      = 256        % number of slow-time blocks
         L_sound = 1         % sounding period interval (default 1)
+        sounding_config = [2, 9] % sounding configuration [a, b]
         TPRI                % one code period + CP = half-block [s]
         Tblock              % full block: [sounding | data] [s]
         PD     = 1          % drone Tx power (normalised)
@@ -61,6 +62,11 @@ classdef SystemParams < handle
             fprintf('=== NTN-ISAC 3-node PMCW simulation (with channel model) ===\n');
             fprintf('N_D=%d  M=%d  T_PRI=%.2f us  T_block=%.2f us\n', ...
                     obj.ND, obj.M, obj.TPRI*1e6, obj.Tblock*1e6);
+            if ~isempty(obj.sounding_config)
+                fprintf('Sounding Config=[%d, %d]\n', obj.sounding_config(1), obj.sounding_config(2));
+            else
+                fprintf('L_sound=%d\n', obj.L_sound);
+            end
             fprintf('dR=%.2f m  Rmax=%.0f m  dv=%.4f m/s  vmax=%.2f m/s\n\n', ...
                     obj.dR, obj.Rmax, obj.dv, obj.vmax);
         end

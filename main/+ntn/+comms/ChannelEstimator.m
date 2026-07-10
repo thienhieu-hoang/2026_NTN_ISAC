@@ -34,11 +34,67 @@ classdef ChannelEstimator < handle
             % Per-block channel estimate: normalise by code length
             h_hat_all = obj.R_sound(obj.ell_DU_est + 1, :) / p.ND;
             
-            % Freeze estimates for blocks between sounding periods
             obj.h_hat = zeros(1, p.M);
-            for m = 1:p.M
-                last_sounding_idx = floor((m-1)/p.L_sound) * p.L_sound + 1;
-                obj.h_hat(m) = h_hat_all(last_sounding_idx);
+            if isprop(p, 'sounding_config') && ~isempty(p.sounding_config)
+                a = p.sounding_config(1);
+                b = p.sounding_config(2);
+                
+                num_periods = ceil(p.M / (b - 1));
+                for k = 1:num_periods
+                    S_k = (k - 1) * (b - 1) + 1;
+                    if S_k > p.M
+                        break;
+                    end
+                    
+                    % First sounding block in period
+                    obj.h_hat(S_k) = h_hat_all(S_k);
+                    
+                    idx_second = S_k + a - 1;
+                    if idx_second <= p.M
+                        % Second sounding block in period
+                        obj.h_hat(idx_second) = h_hat_all(idx_second);
+                        
+                        h1 = h_hat_all(S_k);
+                        h2 = h_hat_all(idx_second);
+                        
+                        % Doppler phase rotation per block
+                        delta_theta = angle(h2 * conj(h1));
+                        psi = delta_theta / (a - 1);
+                        
+                        % Interpolate for blocks between S_k and S_k + a - 1 (if a > 2)
+                        for m = (S_k + 1):(idx_second - 1)
+                            if m <= p.M
+                                t_frac = (m - S_k) / (a - 1);
+                                interp_amp = abs(h1) + (abs(h2) - abs(h1)) * t_frac;
+                                obj.h_hat(m) = interp_amp * exp(1j * (angle(h1) + psi * (m - S_k)));
+                            end
+                        end
+                        
+                        % Extrapolate/predict for blocks after the second sounding block
+                        if S_k + b - 1 <= p.M
+                            upper_limit = S_k + b - 2;
+                        else
+                            upper_limit = p.M;
+                        end
+                        
+                        for m = (idx_second + 1):upper_limit
+                            if m <= p.M
+                                obj.h_hat(m) = h2 * exp(1j * psi * (m - idx_second));
+                            end
+                        end
+                    else
+                        % If only S_k is within bounds, hold its estimate
+                        for m = (S_k + 1):p.M
+                            obj.h_hat(m) = h_hat_all(S_k);
+                        end
+                    end
+                end
+            else
+                % Fallback to L_sound zero-order hold
+                for m = 1:p.M
+                    last_sounding_idx = floor((m-1)/p.L_sound) * p.L_sound + 1;
+                    obj.h_hat(m) = h_hat_all(last_sounding_idx);
+                end
             end
 
             % fprintf('--- Channel estimation at UE (Sec. 4.1, Step 1) ---\n');

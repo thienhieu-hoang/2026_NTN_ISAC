@@ -3,9 +3,14 @@
 See code versions here: [Releases · thienhieu-hoang/2026_NTN_ISAC](https://github.com/thienhieu-hoang/2026_NTN_ISAC/tags)
 now I want to perform channel prediction instead of just estimate channel at sounding period then assume it unchanged  
 in the code, I can configure parameters like: [1 2 9] - which means, the sounding period appears at block 1 and block 2, we estimate the channels ate these 2 blocks, then estimate the Doppler, then predict channel at blocks 3-8 (in which there are no sounding period)
+- **v_7_3 - main:** channel prediction at UE
+	- Config: `[a,b]` - sounding is sent at blocks `1, a, b`, then `b, b+a-1, b+b-1`, ...
+	- Use predicted channel at blocks `1, a` to predict channels at blocks `a+1` to `b-1`, ...
+	- All other slots are `comm` slots.
 - **v7_2 - main:**
 	- Frame structure: (for example, with sounding periodicity of 8 block)
 		``[sound, comm],  [comm, comm]x7 ``
+		`[slot , slot],  [slot, slot]` - 1 `block` is defined by 2 `slot`'s
 - **v7_1 - main**:
 	- Now all the code version is just with the same folder main
 	- Version control by git
