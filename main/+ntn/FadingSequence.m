@@ -48,7 +48,7 @@ classdef FadingSequence < handle
         % model_type : char ('ar1' or 'jakes', default is 'ar1')
 
             if nargin < 4
-                model_type = 'ar1';
+                model_type = 'static';
             end
             obj.model_type = model_type;
             obj.M_seq = M_seq;
@@ -72,6 +72,10 @@ classdef FadingSequence < handle
                 obj.g_DU = ntn.FadingSequence.jakes_sequence(obj.fd_DU, M_seq, p.TPRI);
                 obj.g_DT = ntn.FadingSequence.jakes_sequence(obj.fd_DT, M_seq, p.TPRI);
                 obj.g_TU = ntn.FadingSequence.jakes_sequence(obj.fd_TU, M_seq, p.TPRI);
+            elseif strcmpi(obj.model_type, 'static')
+                obj.g_DU = ones(1, M_seq);
+                obj.g_DT = ones(1, M_seq);
+                obj.g_TU = ones(1, M_seq);
             else
                 % Default to AR(1)
                 obj.g_DU = ntn.FadingSequence.ar1_sequence(obj.alpha_DU, M_seq);

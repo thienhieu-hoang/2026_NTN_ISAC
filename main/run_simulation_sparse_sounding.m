@@ -46,6 +46,9 @@ for f_idx = 1:length(fading_models)
     fprintf('   Fading Model: %s\n', upper(fading_model));
     fprintf('================================================================\n');
     
+    % Re-instantiate ber_helper with the current fading model
+    ber_helper = ntn.comms.BERAnalysis(fading_model);
+    
     % Setup results directory based on selected model
     if strcmpi(fading_model, 'jakes')
         resultsDir = fullfile(ROOT, 'results', 'BER', 'Jake sequence model');
@@ -180,13 +183,11 @@ for f_idx = 1:length(fading_models)
         pos = fig.Position;
         fig.PaperSize = [pos(3), pos(4)];
         fig.PaperPosition = [0, 0, pos(3), pos(4)];
-        print(fig, comparisonPlotPath, '-dpdf', '-r0');
+        print(fig, comparisonPlotPath, '-dpdf', '-painters', '-r0');
     else
         saveas(fig, comparisonPlotPath);
     end
     
-    % Save as PNG as well for quick previewing
-    saveas(fig, strrep(comparisonPlotPath, '.pdf', '.png'));
     fprintf('\nSaved comparison plot: %s\n', comparisonPlotPath);
 end
 

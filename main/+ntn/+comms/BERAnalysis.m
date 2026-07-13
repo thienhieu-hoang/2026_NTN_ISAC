@@ -12,6 +12,7 @@ classdef BERAnalysis < handle
         EbN0_dB    = 0:2:20    % Eb/N0 sweep points [dB]
         M_seq      = 500       % Number of blocks in the continuous sequence
         N_trials   = 200       % Monte Carlo trials per SNR point
+        model_type             % char ('static', 'ar1', or 'jakes')
 
         BER_sim                 % 1 x numel(EbN0_dB)  simulated BER (clean blocks 2..M_seq)
         BER_block1              % 1 x numel(EbN0_dB)  simulated BER of first block (transient)
@@ -24,14 +25,25 @@ classdef BERAnalysis < handle
     end
 
     methods
-        function obj = BERAnalysis()
-            % Pre-compute theoretical BER curves for Rayleigh Fading
+        function obj = BERAnalysis(model_type)
+            if nargin < 1
+                model_type = 'static';
+            end
+            obj.model_type = model_type;
+            
+            % Pre-compute theoretical BER curves
             EbN0_lin           = 10.^(obj.EbN0_dB/10);
             obj.BER_sim        = zeros(size(obj.EbN0_dB));
             obj.BER_block1     = zeros(size(obj.EbN0_dB));
             obj.BER_all        = zeros(size(obj.EbN0_dB));
-            obj.BER_theory     = 0.5 * (1 - sqrt(EbN0_lin ./ (1 + EbN0_lin)));
-            obj.BER_theory_est = 1 ./ (2 * (1 + EbN0_lin));
+            
+            if strcmpi(obj.model_type, 'static')
+                obj.BER_theory     = 0.5 * erfc(sqrt(EbN0_lin));
+                obj.BER_theory_est = 0.5 * exp(-EbN0_lin);
+            else
+                obj.BER_theory     = 0.5 * (1 - sqrt(EbN0_lin ./ (1 + EbN0_lin)));
+                obj.BER_theory_est = 1 ./ (2 * (1 + EbN0_lin));
+            end
         end
     end
 end

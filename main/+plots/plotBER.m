@@ -34,8 +34,17 @@ function plotBER(ber, savePath)
     ylabel('BER');
     ylim([1e-6 1]);
     title('UE downlink BER — continuous sequence PMCW');
-    legend('Theory (BPSK Rayleigh — Perfect CSI)', ...
-           'Theory (Pilot ChEst — Noisy Pilot, Rayleigh)', ...
+    
+    if strcmpi(ber.model_type, 'static')
+        theory_legend1 = 'Theory (BPSK AWGN — Perfect CSI)';
+        theory_legend2 = 'Theory (Pilot ChEst — Noisy Pilot, AWGN)';
+    else
+        theory_legend1 = 'Theory (BPSK Rayleigh — Perfect CSI)';
+        theory_legend2 = 'Theory (Pilot ChEst — Noisy Pilot, Rayleigh)';
+    end
+    
+    legend(theory_legend1, ...
+           theory_legend2, ...
            ['Sim: All Blocks (1 to ', num2str(ber.M_seq), '; Average)'], ...
            'Location', 'southwest');
            % ['Sim: Clean Blocks (2 to ', num2str(ber.M_seq), ')'], ...
@@ -50,7 +59,7 @@ function plotBER(ber, savePath)
         pos = fig.Position;
         fig.PaperSize = [pos(3), pos(4)];
         fig.PaperPosition = [0, 0, pos(3), pos(4)];
-        print(fig, savePath, '-dpdf', '-r0');
+        print(fig, savePath, '-dpdf', '-painters', '-r0');
     else
         saveas(gcf, savePath);
     end
