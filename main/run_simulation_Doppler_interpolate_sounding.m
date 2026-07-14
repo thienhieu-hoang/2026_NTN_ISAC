@@ -22,7 +22,7 @@ channel = ntn.ChannelModel(params, geom);
 ber_helper = ntn.comms.BERAnalysis();
 
 % Sync parameters
-params.M = ber_helper.M_seq;       % M = 500 blocks for continuous sequence simulation
+params.M = ber_helper.M_seq;       % M = 256 blocks for continuous sequence simulation
 N_trials = ber_helper.N_trials;    % 200 trials per SNR point
 EbN0_dB_sparse = 0:4:20;           % Sweep SNR points
 
@@ -35,16 +35,16 @@ beta_DU_1 = C0 * mob.dDU_seq(1)^(-2);
 avg_A_DU = sqrt(beta_DU_1) * sqrt(params.PD);
 
 % List of fading models to sweep
-fading_models = {'ar1', 'jakes'};
+fading_models = {'static'}; % Options: {'static'} (for g=1), or {'ar1', 'jakes'} (for varying g)
 
 % List of sounding configurations to evaluate
-sounding_configs = {[2, 9], [2, 17], [2, 33]};
+sounding_configs = {[2, 9], [2, 17]};
 
 for f_idx = 1:length(fading_models)
     fading_model = fading_models{f_idx};
     fprintf('\n================================================================\n');
     fprintf('   Fading Model: %s\n', upper(fading_model));
-    fprintf('================================================================\n');
+    fprintf('\n================================================================\n');
     
     % Re-instantiate ber_helper with the current fading model
     ber_helper = ntn.comms.BERAnalysis(fading_model);
@@ -52,6 +52,8 @@ for f_idx = 1:length(fading_models)
     % Setup results directory based on selected model
     if strcmpi(fading_model, 'jakes')
         resultsDir = fullfile(ROOT, 'results', 'BER', 'Jake sequence model');
+    elseif strcmpi(fading_model, 'static')
+        resultsDir = fullfile(ROOT, 'results', 'BER', 'Static sequence model');
     else
         resultsDir = fullfile(ROOT, 'results', 'BER', 'AR_1 sequence model');
     end
@@ -115,7 +117,12 @@ for f_idx = 1:length(fading_models)
     end
     
     %% ---- Plot Comparison Along With Benchmark ----
-    benchmarkPath = fullfile(fileparts(resultsDir), 'ue_ber_comms_only.mat');
+    if strcmpi(fading_model, 'static')
+        benchmarkFile = 'ue_ber_comms_only_gaussian.mat';
+    else
+        benchmarkFile = 'ue_ber_comms_only_rayleigh.mat';
+    end
+    benchmarkPath = fullfile(fileparts(resultsDir), benchmarkFile);
     if exist(benchmarkPath, 'file')
         benchmark = load(benchmarkPath);
         hasBenchmark = true;

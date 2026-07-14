@@ -15,6 +15,7 @@ fprintf('================================================================\n\n');
 
 %% ---- Step 1: System, Geometry & Trajectory Initialization ----
 params = ntn.SystemParams();
+params.sounding_config = []; % Reset to standard sounding (every block) for comms-only baseline
 geom = ntn.Geometry(params);
 channel = ntn.ChannelModel(params, geom);
 
@@ -22,7 +23,7 @@ channel = ntn.ChannelModel(params, geom);
 ber = ntn.comms.BERAnalysis();
 
 % Sync parameters
-params.M = ber.M_seq;       % M = 500 blocks for continuous sequence simulation
+params.M = ber.M_seq;       % M = 256 blocks for continuous sequence simulation
 N_trials = ber.N_trials;    % 200 trials per SNR point
 EbN0_dB = ber.EbN0_dB;
 
@@ -118,7 +119,12 @@ end
 pdfPath = fullfile(resultsDir, 'ue_ber_comms_only.pdf');
 plots.plotBER(ber, pdfPath);
 
-matPath = fullfile(resultsDir, 'ue_ber_comms_only.mat');
+if strcmpi(ber.model_type, 'static')
+    benchmarkFile = 'ue_ber_comms_only_gaussian.mat';
+else
+    benchmarkFile = 'ue_ber_comms_only_rayleigh.mat';
+end
+matPath = fullfile(resultsDir, benchmarkFile);
 % Extract values of the plotted lines for easy loading/replotting
 EbN0_dB = ber.EbN0_dB;
 BER_theory = ber.BER_theory;

@@ -25,7 +25,7 @@ classdef SystemParams < handle
         Ncp    = 34         % Cyclic Prefix length (chips)
         M      = 256        % number of slow-time blocks
         L_sound = 1         % sounding period interval (default 1)
-        sounding_config = [2, 9] % sounding configuration [a, b]
+        sounding_config = [] % sounding configuration [a, b]
         TPRI                % one code period + CP = half-block [s]
         Tblock              % full block: [sounding | data] [s]
         PD     = 1          % drone Tx power (normalised)

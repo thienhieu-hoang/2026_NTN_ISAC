@@ -10,7 +10,7 @@ classdef BERAnalysis < handle
 
     properties
         EbN0_dB    = 0:2:20    % Eb/N0 sweep points [dB]
-        M_seq      = 500       % Number of blocks in the continuous sequence
+        M_seq      = 256       % Number of blocks in the continuous sequence
         N_trials   = 200       % Monte Carlo trials per SNR point
         model_type             % char ('static', 'ar1', or 'jakes')
 

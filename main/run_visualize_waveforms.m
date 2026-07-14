@@ -16,8 +16,8 @@ fprintf('================================================================\n\n');
 % =========================================================================
 %   CONFIGURATION PARAMETERS (Edit these as needed)
 % =========================================================================
-M_plot          = 2;     % Number of blocks to plot in the time domain
-S_per_chip      = 16;    % Upsampling factor (Sample Rate / Chip Rate). Set to 1 for Sample Rate = Chip Rate.
+M_plot          = 3;     % Number of blocks to plot in the time domain
+S_per_chip      = 1;    % Upsampling factor (Sample Rate / Chip Rate). Set to 1 for Sample Rate = Chip Rate.
 sounding_config = []; %[3 5]; % Sounding configuration [a b]. Set to [] for standard sounding (sounding in every block).
 % =========================================================================
 
@@ -92,6 +92,7 @@ fig1 = figure('Name', 'NTN-ISAC Waveform Analysis (Time Domain)', 'Position', [1
 y_lim = [-1.5, 1.5];
 
 % Subplot 1: Bit Sequence (Data Payload + Pilot)
+% ax1 = subplot(3, 1, 1);
 ax1 = subplot(4, 1, 1);
 draw_shading(ax1, ND, dD, M_plot, is_comm_slot, y_lim(1), y_lim(2));
 plot(ax1, chip_axis, bits_time, 'k-', 'LineWidth', 2.5);
@@ -115,6 +116,7 @@ for k = 1:2*M_plot
 end
 
 % Subplot 2: PRBS (MLS Code Sequence)
+% ax2 = subplot(3, 1, 2);
 ax2 = subplot(4, 1, 2);
 draw_shading(ax2, ND, dD, M_plot, is_comm_slot, y_lim(1), y_lim(2));
 plot(ax2, chip_axis, prbs_time, 'Color', [0.10 0.35 0.75], 'LineWidth', 1.2);
@@ -124,6 +126,7 @@ title(ax2, '2. PRBS Sequence (Maximal Length Sequence repeated per slot)', 'Font
 set_axes_style(ax2, total_chips, y_lim, ND);
 
 % Subplot 3: PRBS * Bit Sequence (Baseband Modulated Signal)
+% ax3 = subplot(3, 1, 3);
 ax3 = subplot(4, 1, 3);
 draw_shading(ax3, ND, dD, M_plot, is_comm_slot, y_lim(1), y_lim(2));
 plot(ax3, t_chips, baseband_signal_upsampled, 'Color', [0.85 0.30 0.10], 'LineWidth', 1.2);
@@ -138,10 +141,12 @@ draw_shading(ax4, ND, dD, M_plot, is_comm_slot, y_lim(1), y_lim(2), S_per_chip);
 plot(ax4, t_samples, baseband_signal_upsampled, 'Color', [0.45 0.15 0.65], 'LineWidth', 1.5);
 ylabel(ax4, 'Baseband Signal', 'FontWeight', 'bold');
 xlabel(ax4, sprintf('Sample Index (Chip index x %d)', S_per_chip), 'FontWeight', 'bold');
-title(ax4, sprintf('4. Baseband Waveform (Zoomed View: First Slot [Sounding/Pilot] only, Samples 1 to %d)', ND * S_per_chip), 'FontSize', 11, 'FontWeight', 'bold');
+% title(ax4, sprintf('4. Baseband Waveform (Zoomed View: First Slot [Sounding/Pilot] only, Samples 1 to %d)', ND * S_per_chip), 'FontSize', 11, 'FontWeight', 'bold');
+title(ax4, sprintf('4. Baseband Waveform'), 'FontSize', 11, 'FontWeight', 'bold');
 % Just plot the 1st slot in sample domain: X-limit from 0 to ND*S_per_chip
-set_axes_style(ax4, ND * S_per_chip, y_lim, ND * S_per_chip);
-
+% set_axes_style(ax4, ND * S_per_chip, y_lim, ND * S_per_chip);
+%
+set_axes_style(ax4, total_chips, y_lim, ND * S_per_chip);
 
 %% ========================================================================
 %  FIGURE 2: Frequency Domain Analysis (Separate Figure)
