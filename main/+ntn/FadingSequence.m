@@ -67,6 +67,12 @@ classdef FadingSequence < handle
             obj.alpha_DT = besselj(0, 2*pi*obj.fd_DT * p.TPRI);
             obj.alpha_TU = besselj(0, 2*pi*obj.fd_TU * p.TPRI);
 
+            % Retrieve Nakagami shape parameter if available
+            m_val = 2.0;
+            if isprop(p, 'm_nakagami')
+                m_val = p.m_nakagami;
+            end
+
             % Generate fading sequences based on selected model
             if strcmpi(obj.model_type, 'jakes')
                 obj.g_DU = ntn.FadingSequence.jakes_sequence(obj.fd_DU, M_seq, p.TPRI);
@@ -76,8 +82,32 @@ classdef FadingSequence < handle
                 obj.g_DU = ones(1, M_seq);
                 obj.g_DT = ones(1, M_seq);
                 obj.g_TU = ones(1, M_seq);
+            elseif strcmpi(obj.model_type, 'rayleigh-static')
+                % Quasi-static Rayleigh: single complex Gaussian draw repeated over all blocks
+                g_DU_val = (randn + 1j*randn) / sqrt(2);
+                g_DT_val = (randn + 1j*randn) / sqrt(2);
+                g_TU_val = (randn + 1j*randn) / sqrt(2);
+                obj.g_DU = g_DU_val * ones(1, M_seq);
+                obj.g_DT = g_DT_val * ones(1, M_seq);
+                obj.g_TU = g_TU_val * ones(1, M_seq);
+            elseif strcmpi(obj.model_type, 'nakagami') || strcmpi(obj.model_type, 'nakagami-ar1')
+                % Time-varying Nakagami-m fading using AR(1) as base
+                g_DU_raw = ntn.FadingSequence.ar1_sequence(obj.alpha_DU, M_seq);
+                g_DT_raw = ntn.FadingSequence.ar1_sequence(obj.alpha_DT, M_seq);
+                g_TU_raw = ntn.FadingSequence.ar1_sequence(obj.alpha_TU, M_seq);
+                obj.g_DU = ntn.FadingSequence.transform_to_nakagami(g_DU_raw, m_val);
+                obj.g_DT = ntn.FadingSequence.transform_to_nakagami(g_DT_raw, m_val);
+                obj.g_TU = ntn.FadingSequence.transform_to_nakagami(g_TU_raw, m_val);
+            elseif strcmpi(obj.model_type, 'nakagami-static')
+                % Quasi-static Nakagami-m: single draw held constant
+                g_DU_raw = (randn + 1j*randn) / sqrt(2);
+                g_DT_raw = (randn + 1j*randn) / sqrt(2);
+                g_TU_raw = (randn + 1j*randn) / sqrt(2);
+                obj.g_DU = ntn.FadingSequence.transform_to_nakagami(g_DU_raw, m_val) * ones(1, M_seq);
+                obj.g_DT = ntn.FadingSequence.transform_to_nakagami(g_DT_raw, m_val) * ones(1, M_seq);
+                obj.g_TU = ntn.FadingSequence.transform_to_nakagami(g_TU_raw, m_val) * ones(1, M_seq);
             else
-                % Default to AR(1)
+                % Default to AR(1) Rayleigh
                 obj.g_DU = ntn.FadingSequence.ar1_sequence(obj.alpha_DU, M_seq);
                 obj.g_DT = ntn.FadingSequence.ar1_sequence(obj.alpha_DT, M_seq);
                 obj.g_TU = ntn.FadingSequence.ar1_sequence(obj.alpha_TU, M_seq);
@@ -126,6 +156,20 @@ classdef FadingSequence < handle
             
             % Normalize to unit variance: E[|g|^2] = 1
             g = g / sqrt(Np);
+        end
+
+        function g_nak = transform_to_nakagami(g_ray, m)
+            % Transform unit-variance complex Gaussian (Rayleigh magnitude) to Nakagami-m fading
+            abs_g = abs(g_ray);
+            U = 1 - exp(-abs_g.^2);
+            % Use gammaincinv to compute Gamma inverse CDF (scale parameter = 1/m)
+            % Clamp U to [0, 1-eps] to avoid infinity in gammaincinv
+            U = min(max(U, 0), 1 - 1e-15);
+            X = gammaincinv(U, m) / m;
+            
+            g_nak = zeros(size(g_ray));
+            nonzero = abs_g > 0;
+            g_nak(nonzero) = sqrt(X(nonzero)) .* (g_ray(nonzero) ./ abs_g(nonzero));
         end
     end
 end

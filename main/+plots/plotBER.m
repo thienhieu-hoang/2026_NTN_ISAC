@@ -38,6 +38,12 @@ function plotBER(ber, savePath)
     if strcmpi(ber.model_type, 'static')
         theory_legend1 = 'Theory (BPSK AWGN — Perfect CSI)';
         theory_legend2 = 'Theory (Pilot ChEst — Noisy Pilot, AWGN)';
+    elseif strcmpi(ber.model_type, 'nakagami') || strcmpi(ber.model_type, 'nakagami-static')
+        theory_legend1 = sprintf('Theory (BPSK Nakagami-m, m=%.1f — Perfect CSI)', ber.m_nakagami);
+        theory_legend2 = sprintf('Theory (Pilot ChEst — Noisy Pilot, Nakagami-m, m=%.1f)', ber.m_nakagami);
+    elseif strcmpi(ber.model_type, 'rayleigh-static')
+        theory_legend1 = 'Theory (BPSK Rayleigh (Static) — Perfect CSI)';
+        theory_legend2 = 'Theory (Pilot ChEst — Noisy Pilot, Rayleigh (Static))';
     else
         theory_legend1 = 'Theory (BPSK Rayleigh — Perfect CSI)';
         theory_legend2 = 'Theory (Pilot ChEst — Noisy Pilot, Rayleigh)';

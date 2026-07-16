@@ -29,6 +29,7 @@ classdef SystemParams < handle
         TPRI                % one code period + CP = half-block [s]
         Tblock              % full block: [sounding | data] [s]
         PD     = 1          % drone Tx power (normalised)
+        m_nakagami = 2.0    % Nakagami shape parameter (default 2.0)
 
         % MLS waveform
         s_mls               % ND x 1  polar {+1,-1}
